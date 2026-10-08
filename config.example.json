@@ -1,0 +1,13 @@
+{
+  "eos_token_id": 50256,
+  "vocab_size": 50257,
+  "dtype": "uint16",
+  "sequence_length": 1024,
+  "sample_documents": 20000,
+  "workers": 2,
+  "max_decoded_chars_per_sample": 8000,
+  "min_document_tokens": 8,
+  "max_document_tokens": 100000,
+  "quality_sample_rate": 1.0,
+  "ngram_sample_documents": 5000
+}
