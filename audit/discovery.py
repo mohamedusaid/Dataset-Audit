@@ -5,15 +5,16 @@ from pathlib import Path
 from .models import Shard
 
 
-def infer_split(path: Path) -> str:
-    parts = {p.lower() for p in path.parts}
-    name = path.name.lower()
+def infer_split(path: Path, root: Path | None = None) -> str:
+    relative = path.relative_to(root) if root is not None else path
+    directories = {part.lower() for part in relative.parts[:-1]}
+    name = relative.name.lower()
 
-    if "val" in parts or name.startswith("val_") or "validation" in name:
+    if directories & {"val", "validation"} or name.startswith(("val_", "validation_")):
         return "val"
-    if "test" in parts or name.startswith("test_"):
+    if "test" in directories or name.startswith("test_"):
         return "test"
-    if "train" in parts or name.startswith("train_"):
+    if "train" in directories or name.startswith("train_"):
         return "train"
     return "unknown"
 
@@ -24,7 +25,7 @@ def discover_shards(root: Path) -> list[Shard]:
         result.append(
             Shard(
                 path=path,
-                split=infer_split(path),
+                split=infer_split(path, root),
                 size_bytes=path.stat().st_size,
             )
         )

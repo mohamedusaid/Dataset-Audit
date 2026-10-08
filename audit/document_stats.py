@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from tqdm import tqdm
 
-from .stream import iter_documents
+from .stream import iter_split_documents
 
 
 def percentile(values, p):
@@ -22,7 +22,11 @@ def document_statistics(
     by_split = {}
     global_lengths = []
 
-    for shard in tqdm(shards, desc="Documents"):
+    for shard, _, doc in tqdm(
+        iter_split_documents(shards, eos_token_id=eos_token_id, include_empty=True),
+        desc="Documents",
+        unit="doc",
+    ):
         split = shard.split
         state = by_split.setdefault(
             split,
@@ -37,25 +41,24 @@ def document_statistics(
             },
         )
 
-        for doc in iter_documents(shard.path, eos_token_id=eos_token_id, include_empty=True):
-            n = len(doc)
-            if n == 0:
-                state["empty_documents"] += 1
-                continue
+        n = len(doc)
+        if n == 0:
+            state["empty_documents"] += 1
+            continue
 
-            state["documents"] += 1
-            state["tokens_in_documents"] += n
+        state["documents"] += 1
+        state["tokens_in_documents"] += n
 
-            if n < min_document_tokens:
-                state["short_documents"] += 1
-            if n > max_document_tokens:
-                state["long_documents"] += 1
-            if n > sequence_length:
-                state["documents_over_sequence_length"] += 1
+        if n < min_document_tokens:
+            state["short_documents"] += 1
+        if n > max_document_tokens:
+            state["long_documents"] += 1
+        if n > sequence_length:
+            state["documents_over_sequence_length"] += 1
 
-            # Keep lengths for the distribution. This is only one integer per document.
-            state["lengths"].append(n)
-            global_lengths.append(n)
+        # Keep lengths for the distribution. This is only one integer per document.
+        state["lengths"].append(n)
+        global_lengths.append(n)
 
     for state in by_split.values():
         lengths = state.pop("lengths")

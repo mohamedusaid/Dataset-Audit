@@ -5,23 +5,25 @@ from collections import defaultdict
 from tqdm import tqdm
 
 from .hashing import hash_tokens
-from .stream import iter_documents
+from .stream import iter_split_documents
 
 
-def split_document_hashes(shards, eos_token_id=50256):
+def split_document_hashes(shards, eos_token_id=50256, max_document_tokens=100000):
     hashes = defaultdict(set)
 
-    for shard in tqdm(shards, desc="Split leakage"):
-        split = shard.split
-        for doc in iter_documents(shard.path, eos_token_id=eos_token_id):
-            if len(doc):
-                hashes[split].add(hash_tokens(doc))
+    for shard, _, doc in tqdm(
+        iter_split_documents(shards, eos_token_id=eos_token_id),
+        desc="Split leakage",
+        unit="doc",
+    ):
+        if len(doc) <= max_document_tokens:
+            hashes[shard.split].add(hash_tokens(doc))
 
     return hashes
 
 
-def train_validation_leakage(shards, eos_token_id=50256):
-    hashes = split_document_hashes(shards, eos_token_id)
+def train_validation_leakage(shards, eos_token_id=50256, max_document_tokens=100000):
+    hashes = split_document_hashes(shards, eos_token_id, max_document_tokens)
     train = hashes.get("train", set())
     val = hashes.get("val", set())
 

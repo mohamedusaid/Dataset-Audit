@@ -9,7 +9,7 @@ from typing import Any
 
 from tqdm import tqdm
 
-from .stream import iter_documents
+from .stream import iter_split_documents
 from .tokenizer import decode_tokens, get_tokenizer
 
 
@@ -36,32 +36,32 @@ def reservoir_documents(
     reservoir: list[dict[str, Any]] = []
     seen = 0
 
-    for shard in tqdm(shards, desc="Sampling candidates"):
-        for doc_index, doc in enumerate(iter_documents(shard.path, eos_token_id=eos_token_id)):
-            if not len(doc):
+    for shard, doc_index, doc in tqdm(
+        iter_split_documents(shards, eos_token_id=eos_token_id),
+        desc="Sampling candidates",
+        unit="doc",
+    ):
+        seen += 1
+        if len(reservoir) < sample_documents:
+            selected_index = len(reservoir)
+        else:
+            selected_index = rng.randrange(seen)
+            if selected_index >= sample_documents:
                 continue
 
-            seen += 1
-            if len(reservoir) < sample_documents:
-                selected_index = len(reservoir)
-            else:
-                selected_index = rng.randrange(seen)
-                if selected_index >= sample_documents:
-                    continue
-
-            # Copy only after the reservoir algorithm selects this candidate.
-            record = {
-                "split": shard.split,
-                "shard": str(shard.path),
-                "document_index": doc_index,
-                "token_count": len(doc),
-                "tokens": doc[:max_tokens_per_document].copy(),
-                "tokens_truncated": len(doc) > max_tokens_per_document,
-            }
-            if selected_index == len(reservoir):
-                reservoir.append(record)
-            else:
-                reservoir[selected_index] = record
+        # Copy only after the reservoir algorithm selects this candidate.
+        record = {
+            "split": shard.split,
+            "shard": str(shard.path),
+            "document_index": doc_index,
+            "token_count": len(doc),
+            "tokens": doc[:max_tokens_per_document].copy(),
+            "tokens_truncated": len(doc) > max_tokens_per_document,
+        }
+        if selected_index == len(reservoir):
+            reservoir.append(record)
+        else:
+            reservoir[selected_index] = record
 
     truncated = sum(int(record["tokens_truncated"]) for record in reservoir)
     return reservoir, {

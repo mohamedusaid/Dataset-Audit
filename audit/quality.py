@@ -8,9 +8,9 @@ from .tokenizer import decode_tokens, get_tokenizer
 
 URL_RE = re.compile(r"https?://|www\.", re.I)
 EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
-HTML_RE = re.compile(r"<[^>]{1,500}>")
+HTML_RE = re.compile(r"</?[A-Za-z][A-Za-z0-9:-]*(?:\s[^<>]{0,300})?/?>")
 WORD_RE = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)?")
-REPEATED_CHAR_RE = re.compile(r"(.)\1{7,}")
+REPEATED_CHAR_RE = re.compile(r"([^\s])\1{7,}")
 REPEATED_PUNCT_RE = re.compile(r"([!?.,])\1{4,}")
 
 

@@ -19,18 +19,6 @@ def inspect_shard(
 ) -> ShardStats:
     path = shard.path
 
-    if path.stat().st_size % DTYPE.itemsize != 0:
-        return ShardStats(
-            path=str(path),
-            split=shard.split,
-            size_bytes=path.stat().st_size,
-            token_count=0,
-            min_token_id=None,
-            max_token_id=None,
-            invalid_token_count=-1,
-            eos_count=0,
-        )
-
     tokens = open_tokens(path)
 
     min_id = None
@@ -52,7 +40,7 @@ def inspect_shard(
             eos += int(np.count_nonzero(block == eos_token_id))
 
             if h is not None:
-                h.update(block.astype(np.uint16, copy=False).tobytes())
+                h.update(block.astype(DTYPE, copy=False).tobytes())
 
     return ShardStats(
         path=str(path),

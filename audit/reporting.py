@@ -80,6 +80,8 @@ def build_markdown(summary):
             f"- Duplicate groups: **{dup['duplicate_groups']:,}**",
             f"- Duplicate excess documents: **{dup['duplicate_excess_documents']:,}**",
             f"- Duplicate excess fraction: **{dup['duplicate_document_fraction']:.4%}**",
+            f"- Duplicate excess tokens: **{dup['duplicate_excess_tokens']:,}**",
+            f"- Duplicate excess token fraction: **{dup['duplicate_token_fraction']:.4%}**",
             "",
         ]
 

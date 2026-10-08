@@ -87,6 +87,7 @@ def run_audit(shards, output: Path, config: dict):
         leakage = train_validation_leakage(
             shards,
             eos_token_id=config["eos_token_id"],
+            max_document_tokens=config["max_document_tokens"],
         )
         summary["leakage"] = leakage
         save_json(output / "leakage_stats.json", leakage)

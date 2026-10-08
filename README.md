@@ -24,9 +24,8 @@ It checks:
 5. EOS/document statistics
 6. document-length distribution
 7. exact duplicate documents
-8. repeated/low-information documents
+8. sampled low-information quality signals
 9. character/token quality heuristics
-10. language heuristics on sampled documents
 11. repeated n-gram statistics
 12. train/validation leakage at document-hash level
 13. sampled decoded examples
@@ -159,8 +158,9 @@ audit_results/
 ├── duplicate_stats.json
 ├── leakage_stats.json
 ├── quality_stats.json
+├── ngram_stats.json
 ├── samples.jsonl
-└── logs/
+└── run_manifest.json
 ```
 
 ## Operational safeguards
@@ -204,10 +204,6 @@ audit_cli.py
     +-- quality.py
     +-- sampling.py
     +-- reporting.py
-    |
-    +-- report/
-         +-- markdown.py
-         +-- html.py
 ```
 
 The implementation is intentionally independent from the TinyGPT training code.
