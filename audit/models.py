@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -23,11 +22,11 @@ class ShardStats:
     split: str
     size_bytes: int
     token_count: int
-    min_token_id: Optional[int]
-    max_token_id: Optional[int]
+    min_token_id: int | None
+    max_token_id: int | None
     invalid_token_count: int
     eos_count: int
-    sha256: Optional[str] = None
+    sha256: str | None = None
 
     def as_dict(self):
         return asdict(self)

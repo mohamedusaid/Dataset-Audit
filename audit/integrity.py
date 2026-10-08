@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 from tqdm import tqdm
@@ -40,7 +40,7 @@ def inspect_shard(
     h = hashlib.sha256() if compute_sha256 else None
 
     for start in range(0, len(tokens), block_tokens):
-        block = np.asarray(tokens[start:start + block_tokens])
+        block = np.asarray(tokens[start : start + block_tokens])
 
         if len(block):
             bmin = int(block.min())
@@ -72,13 +72,28 @@ def inspect_all(
     vocab_size: int,
     eos_token_id: int,
     compute_sha256: bool = True,
+    workers: int = 1,
 ) -> list[ShardStats]:
-    return [
-        inspect_shard(
-            s,
+    if workers < 1:
+        raise ValueError("workers must be at least one")
+
+    def inspect(shard: Shard) -> ShardStats:
+        return inspect_shard(
+            shard,
             vocab_size=vocab_size,
             eos_token_id=eos_token_id,
             compute_sha256=compute_sha256,
         )
-        for s in tqdm(shards, desc="Integrity")
-    ]
+
+    if workers == 1 or len(shards) < 2:
+        return [inspect(shard) for shard in tqdm(shards, desc="Integrity")]
+
+    # executor.map preserves the discovery order, so reports remain deterministic.
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        return list(
+            tqdm(
+                executor.map(inspect, shards),
+                total=len(shards),
+                desc="Integrity",
+            )
+        )

@@ -1,16 +1,10 @@
 from __future__ import annotations
 
-import math
 import re
-import unicodedata
 from collections import Counter
 
-import numpy as np
-from tqdm import tqdm
-
-from .stream import iter_documents
-from .tokenizer import get_tokenizer, decode_tokens
-
+from .sampling import reservoir_documents
+from .tokenizer import decode_tokens, get_tokenizer
 
 URL_RE = re.compile(r"https?://|www\.", re.I)
 EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
@@ -92,47 +86,57 @@ def sampled_quality_analysis(
     eos_token_id=50256,
     sample_documents=20000,
     max_decoded_chars=8000,
+    seed=42,
+    max_tokens_per_document=16_384,
+    documents=None,
+    sampling_metadata=None,
 ):
     tokenizer = get_tokenizer()
 
-    total = 0
     flagged = Counter()
     examples = []
 
-    for shard in tqdm(shards, desc="Quality sample"):
-        for doc_index, doc in enumerate(
-            iter_documents(shard.path, eos_token_id=eos_token_id)
-        ):
-            if total >= sample_documents:
-                break
+    if documents is None:
+        documents, sampling_metadata = reservoir_documents(
+            shards,
+            eos_token_id=eos_token_id,
+            sample_documents=sample_documents,
+            seed=seed,
+            max_tokens_per_document=max_tokens_per_document,
+        )
+    else:
+        documents = list(documents[:sample_documents])
+        sampling_metadata = (sampling_metadata or {}) | {
+            "reservoir_size": len(documents),
+            "truncated_documents_in_sample": sum(
+                int(document["tokens_truncated"]) for document in documents
+            ),
+        }
 
-            text = decode_tokens(tokenizer, doc, max_decoded_chars)
-            metrics = text_metrics(text)
-            flags = heuristic_quality(metrics, len(doc))
+    for document in documents:
+        text = decode_tokens(tokenizer, document["tokens"], max_decoded_chars)
+        metrics = text_metrics(text)
+        flags = heuristic_quality(metrics, document["token_count"])
 
-            total += 1
-            flagged.update(flags)
+        flagged.update(flags)
 
-            if flags and len(examples) < 100:
-                examples.append(
-                    {
-                        "split": shard.split,
-                        "shard": str(shard.path),
-                        "document_index": doc_index,
-                        "tokens": len(doc),
-                        "flags": flags,
-                        "text": text[:2000],
-                    }
-                )
-
-        if total >= sample_documents:
-            break
+        if flags and len(examples) < 100:
+            examples.append(
+                {
+                    "split": document["split"],
+                    "shard": document["shard"],
+                    "document_index": document["document_index"],
+                    "tokens": document["token_count"],
+                    "tokens_truncated": document["tokens_truncated"],
+                    "flags": flags,
+                    "text": text[:2000],
+                }
+            )
 
     return {
-        "documents_sampled": total,
+        "documents_sampled": len(documents),
+        "sampling": sampling_metadata,
         "flag_counts": dict(flagged),
-        "flag_fraction": {
-            k: v / total if total else 0.0 for k, v in flagged.items()
-        },
+        "flag_fraction": {k: v / len(documents) if documents else 0.0 for k, v in flagged.items()},
         "examples": examples,
     }

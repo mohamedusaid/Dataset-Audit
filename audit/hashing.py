@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import hashlib
+
 import numpy as np
 
 
 def hash_tokens(tokens: np.ndarray) -> str:
     h = hashlib.sha256()
-    h.update(np.asarray(tokens, dtype=np.uint16).tobytes())
+    # Hash a canonical byte representation so the result is stable across hosts.
+    h.update(np.ascontiguousarray(tokens, dtype="<u2").tobytes())
     return h.hexdigest()
 
 

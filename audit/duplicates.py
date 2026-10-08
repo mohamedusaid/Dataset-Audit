@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import Counter, defaultdict
+from collections import Counter
 
 from tqdm import tqdm
 
@@ -26,9 +26,7 @@ def exact_duplicate_analysis(
     total_tokens = 0
 
     for shard in tqdm(shards, desc="Exact dedup"):
-        for doc_index, doc in enumerate(
-            iter_documents(shard.path, eos_token_id=eos_token_id)
-        ):
+        for doc_index, doc in enumerate(iter_documents(shard.path, eos_token_id=eos_token_id)):
             n = len(doc)
             if n == 0 or n > max_document_tokens:
                 continue
@@ -68,8 +66,6 @@ def exact_duplicate_analysis(
         "duplicate_groups": duplicate_groups,
         "duplicate_documents_in_groups": duplicate_docs,
         "duplicate_excess_documents": duplicate_excess,
-        "duplicate_document_fraction": (
-            duplicate_excess / total_docs if total_docs else 0.0
-        ),
+        "duplicate_document_fraction": (duplicate_excess / total_docs if total_docs else 0.0),
         "top_duplicate_groups": top,
     }

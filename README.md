@@ -33,6 +33,22 @@ It checks:
 14. JSON + Markdown + HTML reports
 
 The project is intentionally modular so expensive checks can be enabled/disabled independently.
+It is a dataset diagnostic tool, not a model trainer: its results cannot guarantee
+downstream model quality, safety, or benchmark performance.
+
+## Installation
+
+For normal use:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+For a reproducible editable development setup, including tests and linting:
+
+```bash
+python -m pip install -e ".[dev]"
+```
 
 ## Expected input
 
@@ -87,6 +103,26 @@ python -m audit_cli \
 
 This runs the full non-neural audit while keeping memory usage bounded.
 
+Use the installed command equivalently:
+
+```bash
+tinygpt-audit --data /path/to/data_shards --output ./audit_results
+```
+
+For a reproducible audit configuration, copy and edit `config.example.json`:
+
+```bash
+python -m audit_cli \
+  --data /path/to/data_shards \
+  --output ./audit_results \
+  --config config.json
+```
+
+`--config` deliberately supplies the validated audit-analysis settings from JSON
+and takes precedence over audit-specific command-line settings. Input, output,
+archive extraction limits, and logging remain command-line options because they
+control how the audit is invoked rather than how data is analysed.
+
 For the complete dataset:
 
 ```bash
@@ -125,6 +161,30 @@ audit_results/
 ├── quality_stats.json
 ├── samples.jsonl
 └── logs/
+```
+
+## Operational safeguards
+
+- ZIP inputs are checked for path traversal, symlinks, encryption, excessive file
+  counts, and excessive decompressed size before extraction.
+- Raw shard bytes are read as explicit little-endian `uint16`, making checksums
+  consistent across host architectures.
+- Independent integrity and token-frequency shard scans use `--workers`; report
+  ordering remains deterministic.
+- Quality, n-gram, and text-example analysis use deterministic reservoir sampling
+  (`--seed`) instead of taking the first documents in shard order.
+- Sampled document tokens are capped at `--max-sample-tokens-per-document`; reports
+  state when a selected document was truncated for sampling.
+- Generated JSON and report artifacts are written atomically. `run_manifest.json`
+  records the tool version, validated configuration, Python version, completion
+  timestamp, and input shard checksums for traceability.
+
+Run the quality gate locally with:
+
+```bash
+python -m ruff check .
+python -m ruff format --check .
+python -m pytest
 ```
 
 ## Architecture

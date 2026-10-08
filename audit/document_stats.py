@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from collections import Counter
-from pathlib import Path
-
 import numpy as np
 from tqdm import tqdm
 
@@ -20,6 +17,7 @@ def document_statistics(
     eos_token_id=50256,
     min_document_tokens=8,
     max_document_tokens=100000,
+    sequence_length=1024,
 ):
     by_split = {}
     global_lengths = []
@@ -33,12 +31,13 @@ def document_statistics(
                 "empty_documents": 0,
                 "short_documents": 0,
                 "long_documents": 0,
+                "documents_over_sequence_length": 0,
                 "tokens_in_documents": 0,
                 "lengths": [],
             },
         )
 
-        for doc in iter_documents(shard.path, eos_token_id=eos_token_id):
+        for doc in iter_documents(shard.path, eos_token_id=eos_token_id, include_empty=True):
             n = len(doc)
             if n == 0:
                 state["empty_documents"] += 1
@@ -51,6 +50,8 @@ def document_statistics(
                 state["short_documents"] += 1
             if n > max_document_tokens:
                 state["long_documents"] += 1
+            if n > sequence_length:
+                state["documents_over_sequence_length"] += 1
 
             # Keep lengths for the distribution. This is only one integer per document.
             state["lengths"].append(n)
