@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Example dataset URL; replace with the archive you intend to audit.
 ZIP_URL="https://huggingface.co/Usaidddddddddddddd/TinyGPT-500M-Archive/resolve/main/data_shards_download.zip"
 ZIP_PATH="/content/data_shards_download.zip"
 OUTPUT="/content/audit_results"
